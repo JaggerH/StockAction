@@ -1,0 +1,10 @@
+version: '3'
+services:
+  python-app:
+    image: python:latest
+    working_dir: /code
+    volumes:
+      - .:/code
+    ports:
+      - 8000:8000
+    command: ["tail", "-f", "/dev/null"] # 保持容器后台运行的命令
