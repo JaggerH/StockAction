@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Generic, TypeVar
 from pydantic.generics import GenericModel
-
+from utilities.tushare_models import *
 # Define a generic type variable
 T = TypeVar('T')
 
@@ -16,32 +16,19 @@ class TushareResponse(GenericModel, Generic[T]):
     msg: Optional[str]
     data: Optional[T]
 
-class StockInfo(BaseModel):
-    ts_code: str
-    symbol: str
-    name: str
-    area: str
-    industry: str
-    fullname: Optional[str]
-    enname: Optional[str]
-    cnspell: Optional[str]
-    market: str
-    exchange: Optional[str]
-    curr_type: Optional[str]
-    list_status: Optional[str]
-    list_date: str
-    delist_date: Optional[str]
-    is_hs: Optional[str]
-    act_name: Optional[str]
-    act_ent_type: Optional[str]
+StockListRequest = TushareRequest[StockListParams]
+StockListResponse = TushareResponse[List[StockListFields]]
 
-class QueryStockListParam(BaseModel):
-    ts_code: Optional[str] = None
-    name: Optional[str] = None
-    market: Optional[str] = None
-    list_status: Optional[str] = None
-    exchange: Optional[str] = None
-    is_hs: Optional[str] = None
+AShareDailyRequest = TushareRequest[AShareDailyParams]
+AShareDailyResponse = TushareResponse[List[AShareDailyFields]]
 
-QueryStockListRequest = TushareRequest[QueryStockListParam]
-QueryStockListResponse = TushareResponse[List[StockInfo]]
+IncomeRequest = TushareRequest[IncomeParams]
+IncomeResponse = TushareResponse[List[IncomeFields]]
+
+BalanceSheetRequest = TushareRequest[BalanceSheetParams]
+BalanceSheetResponse = TushareResponse[List[BalanceSheetFields]]
+
+MainBusinessRequest = TushareRequest[MainBusinessParams]
+MainBusinessResponse = TushareResponse[List[MainBusinessFields]]
+
+
