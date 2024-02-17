@@ -1,11 +1,26 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Generic, TypeVar
+from pydantic.generics import GenericModel
 
 class ActionRequest(BaseModel):
     text: str
 
 class ActionResult(BaseModel):
     result: str
+
+# Define a generic type variable
+T = TypeVar('T')
+
+# Define the generic response model
+class TushareRequest(GenericModel, Generic[T]):
+    params: Optional[T] = None
+    fields: List[str]
+
+# Define the generic response model
+class TushareResponse(GenericModel, Generic[T]):
+    code: int
+    msg: Optional[str]
+    data: Optional[T]
 
 class StockInfo(BaseModel):
     ts_code: str
@@ -34,11 +49,5 @@ class QueryStockListParam(BaseModel):
     exchange: Optional[str] = None
     is_hs: Optional[str] = None
 
-class QueryStockListRequest(BaseModel):
-    params: Optional[QueryStockListParam] = None
-    fields: List[str]
-
-class QueryStockListResponse(BaseModel):
-    code: int
-    msg: Optional[str]
-    data: Optional[List[StockInfo]] = None
+QueryStockListRequest = TushareRequest[QueryStockListParam]
+QueryStockListResponse = TushareResponse[List[StockInfo]]
