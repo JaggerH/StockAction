@@ -2,12 +2,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Generic, TypeVar
 from pydantic.generics import GenericModel
 
-class ActionRequest(BaseModel):
-    text: str
-
-class ActionResult(BaseModel):
-    result: str
-
 # Define a generic type variable
 T = TypeVar('T')
 
