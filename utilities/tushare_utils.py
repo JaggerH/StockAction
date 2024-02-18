@@ -1,18 +1,12 @@
-import yaml
+import os
 import httpx
 from fastapi import HTTPException
 from pydantic import BaseModel
 from typing import Optional, Type, List
 
-def load_config():
-    with open("config.yaml", "r") as file:
-        return yaml.safe_load(file)
-
-config = load_config()
-
 async def fetch_tushare_data(api_name: str, params: Optional[dict], fields: list) -> dict:
     url = "http://api.tushare.pro"
-    token = config['tushare']['token']
+    token = os.getenv('TUSHARE_API_KEY')
     json_data = {
         "api_name": api_name,
         "token": token,
