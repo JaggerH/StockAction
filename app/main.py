@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from .routes import actions
 
-app = FastAPI()
+app = FastAPI(title="ChatGPT Stock Action", servers=[{"url": "https://chatgpt-stock-action.azurewebsites.net"}])
 
 app.include_router(actions.router)
 
