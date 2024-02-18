@@ -3,23 +3,18 @@ function generateModelCode(modelName, $table) {
 
     $table.find('tr').each(function() {
         const $cells = $(this).find('td');
-        if ($cells.length == 4) {
-            const name = $cells.eq(0).text();
-            const type = $cells.eq(1).text();
-            const defaultDisplay = $cells.eq(2).text();
-            const description = $cells.eq(3).text();
+        let name, type, defaultDisplay, description;
 
-            const fieldType = defaultDisplay === 'N' ? `Optional[${type}]` : type;
-            modelCode += `    ${name}: ${fieldType}  # ${description}\n`;
-        }
+        if ($cells.length >= 3) {
+            name = $cells.eq(0).text();
+            type = $cells.eq(1).text();
+            description = $cells.eq($cells.length - 1).text();
+            defaultDisplay = $cells.length === 4 ? $cells.eq(2).text() : 'N';
 
-        if ($cells.length == 3) {
-            const name = $cells.eq(0).text();
-            const type = $cells.eq(1).text();
-            const defaultDisplay = 'N';
-            const description = $cells.eq(2).text();
+            let fieldType = defaultDisplay === 'N' ? `Optional[${type}]` : type;
+            if (defaultDisplay === 'N') 
+                fieldType += ' = None';
 
-            const fieldType = defaultDisplay === 'N' ? `Optional[${type}]` : type;
             modelCode += `    ${name}: ${fieldType}  # ${description}\n`;
         }
     });
@@ -29,3 +24,22 @@ function generateModelCode(modelName, $table) {
 
 generateModelCode("MainBzParams", $($('table')[0]))
 generateModelCode("MainBzFields", $($('table')[1]))
+
+function generateArrayFromTableColumn($table) {
+    let arrayResult = [];
+
+    $table.find('tr').each(function(index) {
+        // Skip the header row
+        if (index === 0) return;
+
+        const $cells = $(this).find('td');
+        if ($cells.length > 0) {
+            const firstColumnText = $cells.eq(0).text();
+            arrayResult.push(firstColumnText);
+        }
+    });
+
+    return JSON.stringify(arrayResult);
+}
+
+generateArrayFromTableColumn($($('table')[1]))
