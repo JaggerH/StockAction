@@ -16,18 +16,18 @@ class StockListFields(BaseModel):
     name: str  # 股票名称
     area: str  # 地域
     industry: str  # 所属行业
-    fullname: Optional[str]  # 股票全称
-    enname: Optional[str]  # 英文全称S深股通
-    cnspell: Optional[str]  # 拼音缩写
-    market: str  # 市场类型（主板/创业板/科创板/CDR）
-    exchange: Optional[str]  # 交易所代码
-    curr_type: Optional[str]  # 交易货币
-    list_status: Optional[str]  # 上市状态 L上市 D退市 P暂停上市
+    fullname: Optional[str] = None  # 股票全称
+    enname: Optional[str] = None  # 英文全称S深股通
+    cnspell: Optional[str] = None  # 拼音缩写
+    market: Optional[str] = None  # 市场类型（主板/创业板/科创板/CDR）
+    exchange: Optional[str] = None  # 交易所代码
+    curr_type: Optional[str] = None  # 交易货币
+    list_status: Optional[str] = None  # 上市状态 L上市 D退市 P暂停上市
     list_date: str  # 上市日期
-    delist_date: Optional[str]  # 退市日期
-    is_hs: Optional[str]  # 是否沪深港通标的，N否 H沪股通 S深股通
-    act_name: Optional[str]  # 实控人名称
-    act_ent_type: Optional[str]  # 实控人企业性质
+    delist_date: Optional[str] = None  # 退市日期
+    is_hs: Optional[str] = None  # 是否沪深港通标的，N否 H沪股通 S深股通
+    act_name: Optional[str] = None  # 实控人名称
+    act_ent_type: Optional[str] = None  # 实控人企业性质
 
 
 # A股日线行情
@@ -38,17 +38,17 @@ class AShareDailyParams(BaseModel):
     end_date: Optional[str] = None  # 结束日期(YYYYMMDD)
 
 class AShareDailyFields(BaseModel):
-    ts_code: Optional[str]  # 股票代码
-    trade_date: Optional[str]  # 交易日期
-    open: Optional[float]  # 开盘价
-    high: Optional[float]  # 最高价
-    low: Optional[float]  # 最低价
-    close: Optional[float]  # 收盘价
-    pre_close: Optional[float]  # 昨收价(前复权)
-    change: Optional[float]  # 涨跌额
-    pct_chg: Optional[float]  # 涨跌幅 （未复权，如果是复权请用 通用行情接口 ）
-    vol: Optional[float]  # 成交量 （手）
-    amount: Optional[float]  # 成交额 （千元）
+    ts_code: Optional[str] = None  # 股票代码
+    trade_date: Optional[str] = None  # 交易日期
+    open: Optional[float] = None  # 开盘价
+    high: Optional[float] = None  # 最高价
+    low: Optional[float] = None  # 最低价
+    close: Optional[float] = None  # 收盘价
+    pre_close: Optional[float] = None  # 昨收价(前复权)
+    change: Optional[float] = None  # 涨跌额
+    pct_chg: Optional[float] = None  # 涨跌幅 （未复权，如果是复权请用 通用行情接口 ）
+    vol: Optional[float] = None  # 成交量 （手）
+    amount: Optional[float] = None  # 成交额 （千元）
 
 
 # 利润表 https://tushare.pro/document/2?doc_id=33
@@ -146,16 +146,16 @@ class IncomeFields(BaseModel):
     prfshare_payable_dvd: float  # 应付优先股股利
     comshare_payable_dvd: float  # 应付普通股股利
     capit_comstock_div: float  # 转作股本的普通股股利
-    net_after_nr_lp_correct: Optional[float]  # 扣除非经常性损益后的净利润（更正前）
-    credit_impa_loss: Optional[float]  # 信用减值损失
-    net_expo_hedging_benefits: Optional[float]  # 净敞口套期收益
-    oth_impair_loss_assets: Optional[float]  # 其他资产减值损失
-    total_opcost: Optional[float]  # 营业总成本（二）
-    amodcost_fin_assets: Optional[float]  # 以摊余成本计量的金融资产终止确认收益
-    oth_income: Optional[float]  # 其他收益
-    asset_disp_income: Optional[float]  # 资产处置收益
-    continued_net_profit: Optional[float]  # 持续经营净利润
-    end_net_profit: Optional[float]  # 终止经营净利润
+    net_after_nr_lp_correct: Optional[float] = None  # 扣除非经常性损益后的净利润（更正前）
+    credit_impa_loss: Optional[float] = None  # 信用减值损失
+    net_expo_hedging_benefits: Optional[float] = None  # 净敞口套期收益
+    oth_impair_loss_assets: Optional[float] = None  # 其他资产减值损失
+    total_opcost: Optional[float] = None  # 营业总成本（二）
+    amodcost_fin_assets: Optional[float] = None  # 以摊余成本计量的金融资产终止确认收益
+    oth_income: Optional[float] = None  # 其他收益
+    asset_disp_income: Optional[float] = None  # 资产处置收益
+    continued_net_profit: Optional[float] = None  # 持续经营净利润
+    end_net_profit: Optional[float] = None  # 终止经营净利润
     update_flag: str  # 更新标识
 
 # 资产负债表 https://tushare.pro/document/2?doc_id=36
@@ -314,12 +314,12 @@ class BalanceSheetFields(BaseModel):
     long_pay_total: float  # 长期应付款(合计)(元)
     debt_invest: float  # 债权投资(元)
     oth_debt_invest: float  # 其他债权投资(元)
-    oth_eq_invest: Optional[float]  # 其他权益工具投资(元)
-    oth_illiq_fin_assets: Optional[float]  # 其他非流动金融资产(元)
-    oth_eq_ppbond: Optional[float]  # 其他权益工具:永续债(元)
-    receiv_financing: Optional[float]  # 应收款项融资
-    use_right_assets: Optional[float]  # 使用权资产
-    lease_liab: Optional[float]  # 租赁负债
+    oth_eq_invest: Optional[float] = None  # 其他权益工具投资(元)
+    oth_illiq_fin_assets: Optional[float] = None  # 其他非流动金融资产(元)
+    oth_eq_ppbond: Optional[float] = None  # 其他权益工具:永续债(元)
+    receiv_financing: Optional[float] = None  # 应收款项融资
+    use_right_assets: Optional[float] = None  # 使用权资产
+    lease_liab: Optional[float] = None  # 租赁负债
     contract_assets: float  # 合同资产
     contract_liab: float  # 合同负债
     accounts_receiv_bill: float  # 应收票据及应收账款
@@ -337,11 +337,11 @@ class MainBusinessParams(BaseModel):
     end_date: Optional[str] = None  # 报告期结束日期
 
 class MainBusinessFields(BaseModel):
-    ts_code: Optional[str]  # TS代码
-    end_date: Optional[str]  # 报告期
-    bz_item: Optional[str]  # 主营业务来源
-    bz_sales: Optional[float]  # 主营业务收入(元)
-    bz_profit: Optional[float]  # 主营业务利润(元)
-    bz_cost: Optional[float]  # 主营业务成本(元)
-    curr_type: Optional[str]  # 货币代码
-    update_flag: Optional[str]  # 是否更新
+    ts_code: Optional[str] = None  # TS代码
+    end_date: Optional[str] = None  # 报告期
+    bz_item: Optional[str] = None  # 主营业务来源
+    bz_sales: Optional[float] = None  # 主营业务收入(元)
+    bz_profit: Optional[float] = None  # 主营业务利润(元)
+    bz_cost: Optional[float] = None  # 主营业务成本(元)
+    curr_type: Optional[str] = None  # 货币代码
+    update_flag: Optional[str] = None  # 是否更新

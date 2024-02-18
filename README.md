@@ -9,6 +9,11 @@ I use Visual Studio Code, refer to the repo:
 docker-compose up
 ```
 ### STEP 2. run web server
+If you are using venv, set envrionment first.
+```
+$env:LOGIN_API_KEY='YOUR_API_KEY'
+$env:TUSHARE_API_KEY='YOUR_API_KEY'
+```
 To run the server, navigate to the chatgpt_api directory and run:
 ```
 uvicorn app.main:app --reload --host=0.0.0.0 --port=8000
