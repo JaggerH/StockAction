@@ -1,0 +1,15 @@
+需接入接口,router,Model Name,link
+股票列表,stock_list,StockList,https://tushare.pro/document/2?doc_id=25
+A股日线行情,a_stock_daily,AShareDaily,https://tushare.pro/document/2?doc_id=27
+利润表,income,Income,https://tushare.pro/document/2?doc_id=33
+资产负债表,balance_sheet,BalanceSheet,https://tushare.pro/document/2?doc_id=36
+现金流量表,cashflow,Cashflow,https://tushare.pro/document/2?doc_id=44
+主营业务构成,main_business,MainBusiness,https://tushare.pro/document/2?doc_id=81
+概念股分类,concept,Concept,https://tushare.pro/document/2?doc_id=125
+涨跌停列表,limit_list,LimitList,https://tushare.pro/document/2?doc_id=298
+每日指标,daily_basic,DailyBasic,https://tushare.pro/document/2?doc_id=32
+申万行业成分构成,index_member,IndexMember,https://tushare.pro/document/2?doc_id=182
+市场交易统计,daily_info,DailyInfo,https://tushare.pro/document/2?doc_id=215
+同花顺概念和行业指数,ths_index,ThsIndex,https://tushare.pro/document/2?doc_id=259
+同花顺板块指数行情,ths_daily,ThsDaily,https://tushare.pro/document/2?doc_id=260
+同花顺概念板块成分,ths_member,ThsMember,https://tushare.pro/document/2?doc_id=261

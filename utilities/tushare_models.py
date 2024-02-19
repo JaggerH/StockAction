@@ -1,7 +1,21 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional, Generic, TypeVar
+from pydantic.generics import GenericModel
 
-# 基础信息 https://tushare.pro/document/2?doc_id=25
+# Define a generic type variable
+T = TypeVar('T')
+
+# Define the generic response model
+class TushareRequest(GenericModel, Generic[T]):
+    params: Optional[T] = None
+    fields: List[str]
+
+# Define the generic response model
+class TushareResponse(GenericModel, Generic[T]):
+    code: int
+    msg: Optional[str]
+    data: Optional[T]
+    
 class StockListParams(BaseModel):
     ts_code: Optional[str] = None  # TS股票代码
     name: Optional[str] = None  # 名称
@@ -10,32 +24,36 @@ class StockListParams(BaseModel):
     exchange: Optional[str] = None  # 交易所 SSE上交所 SZSE深交所 BSE北交所
     is_hs: Optional[str] = None  # 是否沪深港通标的，N否 H沪股通 S深股通
 
+StockListRequest = TushareRequest[StockListParams]
+
 class StockListFields(BaseModel):
-    ts_code: str  # TS代码
-    symbol: str  # 股票代码
-    name: str  # 股票名称
-    area: str  # 地域
-    industry: str  # 所属行业
+    ts_code: Optional[str] = None  # TS代码
+    symbol: Optional[str] = None  # 股票代码
+    name: Optional[str] = None  # 股票名称
+    area: Optional[str] = None  # 地域
+    industry: Optional[str] = None  # 所属行业
     fullname: Optional[str] = None  # 股票全称
-    enname: Optional[str] = None  # 英文全称S深股通
+    enname: Optional[str] = None  # 英文全称
     cnspell: Optional[str] = None  # 拼音缩写
     market: Optional[str] = None  # 市场类型（主板/创业板/科创板/CDR）
     exchange: Optional[str] = None  # 交易所代码
     curr_type: Optional[str] = None  # 交易货币
     list_status: Optional[str] = None  # 上市状态 L上市 D退市 P暂停上市
-    list_date: str  # 上市日期
+    list_date: Optional[str] = None  # 上市日期
     delist_date: Optional[str] = None  # 退市日期
     is_hs: Optional[str] = None  # 是否沪深港通标的，N否 H沪股通 S深股通
     act_name: Optional[str] = None  # 实控人名称
     act_ent_type: Optional[str] = None  # 实控人企业性质
 
+StockListResponse = TushareResponse[List[StockListFields]]
 
-# A股日线行情
 class AShareDailyParams(BaseModel):
     ts_code: Optional[str] = None  # 股票代码（支持多个股票同时提取，逗号分隔）
     trade_date: Optional[str] = None  # 交易日期（YYYYMMDD）
     start_date: Optional[str] = None  # 开始日期(YYYYMMDD)
     end_date: Optional[str] = None  # 结束日期(YYYYMMDD)
+
+AShareDailyRequest = TushareRequest[AShareDailyParams]
 
 class AShareDailyFields(BaseModel):
     ts_code: Optional[str] = None  # 股票代码
@@ -50,10 +68,10 @@ class AShareDailyFields(BaseModel):
     vol: Optional[float] = None  # 成交量 （手）
     amount: Optional[float] = None  # 成交额 （千元）
 
+AShareDailyResponse = TushareResponse[List[AShareDailyFields]]
 
-# 利润表 https://tushare.pro/document/2?doc_id=33
 class IncomeParams(BaseModel):
-    ts_code: str  # 股票代码
+    ts_code: Optional[str] = None  # 股票代码
     ann_date: Optional[str] = None  # 公告日期（YYYYMMDD格式，下同）
     f_ann_date: Optional[str] = None  # 实际公告日期
     start_date: Optional[str] = None  # 公告开始日期
@@ -62,10 +80,12 @@ class IncomeParams(BaseModel):
     report_type: Optional[str] = None  # 报告类型
     comp_type: Optional[str] = None  # 公司类型（1一般工商业2银行3保险4证券）
 
+IncomeRequest = TushareRequest[IncomeParams]
+
 class IncomeFields(BaseModel):
     ts_code: Optional[str] = None  # TS代码
     ann_date: Optional[str] = None  # 公告日期
-    f_ann_date: Optional[str] = None   # 实际公告日期
+    f_ann_date: Optional[str] = None  # 实际公告日期
     end_date: Optional[str] = None  # 报告期
     report_type: Optional[str] = None  # 报告类型 见底部表
     comp_type: Optional[str] = None  # 公司类型(1一般工商业2银行3保险4证券)
@@ -158,9 +178,10 @@ class IncomeFields(BaseModel):
     end_net_profit: Optional[float] = None  # 终止经营净利润
     update_flag: Optional[str] = None  # 更新标识
 
-# 资产负债表 https://tushare.pro/document/2?doc_id=36
+IncomeResponse = TushareResponse[List[IncomeFields]]
+
 class BalanceSheetParams(BaseModel):
-    ts_code: str  # 股票代码
+    ts_code: Optional[str] = None  # 股票代码
     ann_date: Optional[str] = None  # 公告日期(YYYYMMDD格式，下同)
     start_date: Optional[str] = None  # 公告开始日期
     end_date: Optional[str] = None  # 公告结束日期
@@ -168,14 +189,16 @@ class BalanceSheetParams(BaseModel):
     report_type: Optional[str] = None  # 报告类型：见下方详细说明
     comp_type: Optional[str] = None  # 公司类型：1一般工商业 2银行 3保险 4证券
 
+BalanceSheetRequest = TushareRequest[BalanceSheetParams]
+
 class BalanceSheetFields(BaseModel):
-    ts_code: Optional[str] = None # TS股票代码
-    ann_date: Optional[str] = None # 公告日期
-    f_ann_date: Optional[str] = None # 实际公告日期
-    end_date: Optional[str] = None # 报告期
-    report_type: Optional[str] = None # 报表类型
-    comp_type: Optional[str] = None # 公司类型(1一般工商业2银行3保险4证券)
-    end_type: Optional[str] = None # 报告期类型
+    ts_code: Optional[str] = None  # TS股票代码
+    ann_date: Optional[str] = None  # 公告日期
+    f_ann_date: Optional[str] = None  # 实际公告日期
+    end_date: Optional[str] = None  # 报告期
+    report_type: Optional[str] = None  # 报表类型
+    comp_type: Optional[str] = None  # 公司类型(1一般工商业2银行3保险4证券)
+    end_type: Optional[str] = None  # 报告期类型
     total_share: Optional[float] = None  # 期末总股本
     cap_rese: Optional[float] = None  # 资本公积金
     undistr_porfit: Optional[float] = None  # 未分配利润
@@ -326,15 +349,134 @@ class BalanceSheetFields(BaseModel):
     accounts_pay: Optional[float] = None  # 应付票据及应付账款
     oth_rcv_total: Optional[float] = None  # 其他应收款(合计)（元）
     fix_assets_total: Optional[float] = None  # 固定资产(合计)(元)
-    update_flag: Optional[str] = None # 更新标识
+    update_flag: Optional[str] = None  # 更新标识
 
-# 主营业务构成 https://tushare.pro/document/2?doc_id=81
+BalanceSheetResponse = TushareResponse[List[BalanceSheetFields]]
+
+class CashflowParams(BaseModel):
+    ts_code: Optional[str] = None  # 股票代码
+    ann_date: Optional[str] = None  # 公告日期（YYYYMMDD格式，下同）
+    f_ann_date: Optional[str] = None  # 实际公告日期
+    start_date: Optional[str] = None  # 公告开始日期
+    end_date: Optional[str] = None  # 公告结束日期
+    period: Optional[str] = None  # 报告期(每个季度最后一天的日期，比如20171231表示年报)
+    report_type: Optional[str] = None  # 报告类型：见下方详细说明
+    comp_type: Optional[str] = None  # 公司类型：1一般工商业 2银行 3保险 4证券
+    is_calc: Optional[int] = None  # 是否计算报表
+    start_date: Optional[str] = None  # 公告开始日期
+    end_date: Optional[str] = None  # 公告结束日期
+
+CashflowRequest = TushareRequest[CashflowParams]
+
+class CashflowFields(BaseModel):
+    ts_code: Optional[str] = None  # TS股票代码
+    ann_date: Optional[str] = None  # 公告日期
+    f_ann_date: Optional[str] = None  # 实际公告日期
+    end_date: Optional[str] = None  # 报告期
+    comp_type: Optional[str] = None  # 公司类型(1一般工商业2银行3保险4证券)
+    report_type: Optional[str] = None  # 报表类型
+    end_type: Optional[str] = None  # 报告期类型
+    net_profit: Optional[float] = None  # 净利润
+    finan_exp: Optional[float] = None  # 财务费用
+    c_fr_sale_sg: Optional[float] = None  # 销售商品、提供劳务收到的现金
+    recp_tax_rends: Optional[float] = None  # 收到的税费返还
+    n_depos_incr_fi: Optional[float] = None  # 客户存款和同业存放款项净增加额
+    n_incr_loans_cb: Optional[float] = None  # 向中央银行借款净增加额
+    n_inc_borr_oth_fi: Optional[float] = None  # 向其他金融机构拆入资金净增加额
+    prem_fr_orig_contr: Optional[float] = None  # 收到原保险合同保费取得的现金
+    n_incr_insured_dep: Optional[float] = None  # 保户储金净增加额
+    n_reinsur_prem: Optional[float] = None  # 收到再保业务现金净额
+    n_incr_disp_tfa: Optional[float] = None  # 处置交易性金融资产净增加额
+    ifc_cash_incr: Optional[float] = None  # 收取利息和手续费净增加额
+    n_incr_disp_faas: Optional[float] = None  # 处置可供出售金融资产净增加额
+    n_incr_loans_oth_bank: Optional[float] = None  # 拆入资金净增加额
+    n_cap_incr_repur: Optional[float] = None  # 回购业务资金净增加额
+    c_fr_oth_operate_a: Optional[float] = None  # 收到其他与经营活动有关的现金
+    c_inf_fr_operate_a: Optional[float] = None  # 经营活动现金流入小计
+    c_paid_goods_s: Optional[float] = None  # 购买商品、接受劳务支付的现金
+    c_paid_to_for_empl: Optional[float] = None  # 支付给职工以及为职工支付的现金
+    c_paid_for_taxes: Optional[float] = None  # 支付的各项税费
+    n_incr_clt_loan_adv: Optional[float] = None  # 客户贷款及垫款净增加额
+    n_incr_dep_cbob: Optional[float] = None  # 存放央行和同业款项净增加额
+    c_pay_claims_orig_inco: Optional[float] = None  # 支付原保险合同赔付款项的现金
+    pay_handling_chrg: Optional[float] = None  # 支付手续费的现金
+    pay_comm_insur_plcy: Optional[float] = None  # 支付保单红利的现金
+    oth_cash_pay_oper_act: Optional[float] = None  # 支付其他与经营活动有关的现金
+    st_cash_out_act: Optional[float] = None  # 经营活动现金流出小计
+    n_cashflow_act: Optional[float] = None  # 经营活动产生的现金流量净额
+    oth_recp_ral_inv_act: Optional[float] = None  # 收到其他与投资活动有关的现金
+    c_disp_withdrwl_invest: Optional[float] = None  # 收回投资收到的现金
+    c_recp_return_invest: Optional[float] = None  # 取得投资收益收到的现金
+    n_recp_disp_fiolta: Optional[float] = None  # 处置固定资产、无形资产和其他长期资产收回的现金净额
+    n_recp_disp_sobu: Optional[float] = None  # 处置子公司及其他营业单位收到的现金净额
+    stot_inflows_inv_act: Optional[float] = None  # 投资活动现金流入小计
+    c_pay_acq_const_fiolta: Optional[float] = None  # 购建固定资产、无形资产和其他长期资产支付的现金
+    c_paid_invest: Optional[float] = None  # 投资支付的现金
+    n_disp_subs_oth_biz: Optional[float] = None  # 取得子公司及其他营业单位支付的现金净额
+    oth_pay_ral_inv_act: Optional[float] = None  # 支付其他与投资活动有关的现金
+    n_incr_pledge_loan: Optional[float] = None  # 质押贷款净增加额
+    stot_out_inv_act: Optional[float] = None  # 投资活动现金流出小计
+    n_cashflow_inv_act: Optional[float] = None  # 投资活动产生的现金流量净额
+    c_recp_borrow: Optional[float] = None  # 取得借款收到的现金
+    proc_issue_bonds: Optional[float] = None  # 发行债券收到的现金
+    oth_cash_recp_ral_fnc_act: Optional[float] = None  # 收到其他与筹资活动有关的现金
+    stot_cash_in_fnc_act: Optional[float] = None  # 筹资活动现金流入小计
+    free_cashflow: Optional[float] = None  # 企业自由现金流量
+    c_prepay_amt_borr: Optional[float] = None  # 偿还债务支付的现金
+    c_pay_dist_dpcp_int_exp: Optional[float] = None  # 分配股利、利润或偿付利息支付的现金
+    incl_dvd_profit_paid_sc_ms: Optional[float] = None  # 其中:子公司支付给少数股东的股利、利润
+    oth_cashpay_ral_fnc_act: Optional[float] = None  # 支付其他与筹资活动有关的现金
+    stot_cashout_fnc_act: Optional[float] = None  # 筹资活动现金流出小计
+    n_cash_flows_fnc_act: Optional[float] = None  # 筹资活动产生的现金流量净额
+    eff_fx_flu_cash: Optional[float] = None  # 汇率变动对现金的影响
+    n_incr_cash_cash_equ: Optional[float] = None  # 现金及现金等价物净增加额
+    c_cash_equ_beg_period: Optional[float] = None  # 期初现金及现金等价物余额
+    c_cash_equ_end_period: Optional[float] = None  # 期末现金及现金等价物余额
+    c_recp_cap_contrib: Optional[float] = None  # 吸收投资收到的现金
+    incl_cash_rec_saims: Optional[float] = None  # 其中:子公司吸收少数股东投资收到的现金
+    uncon_invest_loss: Optional[float] = None  # 未确认投资损失
+    prov_depr_assets: Optional[float] = None  # 加:资产减值准备
+    depr_fa_coga_dpba: Optional[float] = None  # 固定资产折旧、油气资产折耗、生产性生物资产折旧
+    amort_intang_assets: Optional[float] = None  # 无形资产摊销
+    lt_amort_deferred_exp: Optional[float] = None  # 长期待摊费用摊销
+    decr_deferred_exp: Optional[float] = None  # 待摊费用减少
+    incr_acc_exp: Optional[float] = None  # 预提费用增加
+    loss_disp_fiolta: Optional[float] = None  # 处置固定、无形资产和其他长期资产的损失
+    loss_scr_fa: Optional[float] = None  # 固定资产报废损失
+    loss_fv_chg: Optional[float] = None  # 公允价值变动损失
+    invest_loss: Optional[float] = None  # 投资损失
+    decr_def_inc_tax_assets: Optional[float] = None  # 递延所得税资产减少
+    incr_def_inc_tax_liab: Optional[float] = None  # 递延所得税负债增加
+    decr_inventories: Optional[float] = None  # 存货的减少
+    decr_oper_payable: Optional[float] = None  # 经营性应收项目的减少
+    incr_oper_payable: Optional[float] = None  # 经营性应付项目的增加
+    others: Optional[float] = None  # 其他
+    im_net_cashflow_oper_act: Optional[float] = None  # 经营活动产生的现金流量净额(间接法)
+    conv_debt_into_cap: Optional[float] = None  # 债务转为资本
+    conv_copbonds_due_within_1y: Optional[float] = None  # 一年内到期的可转换公司债券
+    fa_fnc_leases: Optional[float] = None  # 融资租入固定资产
+    im_n_incr_cash_equ: Optional[float] = None  # 现金及现金等价物净增加额(间接法)
+    net_dism_capital_add: Optional[float] = None  # 拆出资金净增加额
+    net_cash_rece_sec: Optional[float] = None  # 代理买卖证券收到的现金净额(元)
+    credit_impa_loss: Optional[float] = None  # 信用减值损失
+    use_right_asset_dep: Optional[float] = None  # 使用权资产折旧
+    oth_loss_asset: Optional[float] = None  # 其他资产减值损失
+    end_bal_cash: Optional[float] = None  # 现金的期末余额
+    beg_bal_cash: Optional[float] = None  # 减:现金的期初余额
+    end_bal_cash_equ: Optional[float] = None  # 加:现金等价物的期末余额
+    beg_bal_cash_equ: Optional[float] = None  # 减:现金等价物的期初余额
+    update_flag: Optional[str] = None  # 更新标志(1最新）
+
+CashflowResponse = TushareResponse[List[CashflowFields]]
+
 class MainBusinessParams(BaseModel):
-    ts_code: str  # 股票代码
+    ts_code: Optional[str] = None  # 股票代码
     period: Optional[str] = None  # 报告期(每个季度最后一天的日期,比如20171231表示年报)
     type: Optional[str] = None  # 类型：P按产品 D按地区 I按行业（请输入大写字母P或者D）
     start_date: Optional[str] = None  # 报告期开始日期
     end_date: Optional[str] = None  # 报告期结束日期
+
+MainBusinessRequest = TushareRequest[MainBusinessParams]
 
 class MainBusinessFields(BaseModel):
     ts_code: Optional[str] = None  # TS代码
@@ -345,3 +487,186 @@ class MainBusinessFields(BaseModel):
     bz_cost: Optional[float] = None  # 主营业务成本(元)
     curr_type: Optional[str] = None  # 货币代码
     update_flag: Optional[str] = None  # 是否更新
+
+MainBusinessResponse = TushareResponse[List[MainBusinessFields]]
+
+class ConceptParams(BaseModel):
+    src: Optional[str] = None  # 来源，默认为ts
+
+ConceptRequest = TushareRequest[ConceptParams]
+
+class ConceptFields(BaseModel):
+    code: Optional[str] = None  # 概念分类ID
+    name: Optional[str] = None  # 概念分类名称
+    src: Optional[str] = None  # 来源
+
+ConceptResponse = TushareResponse[List[ConceptFields]]
+
+class LimitListParams(BaseModel):
+    trade_date: Optional[str] = None  # 交易日期
+    ts_code: Optional[str] = None  # 股票代码
+    limit_type: Optional[str] = None  # 涨跌停类型（U涨停D跌停Z炸板）
+    exchange: Optional[str] = None  # 交易所（SH上交所SZ深交所BJ北交所）
+    start_date: Optional[str] = None  # 开始日期
+    end_date: Optional[str] = None  # 结束日期
+
+LimitListRequest = TushareRequest[LimitListParams]
+
+class LimitListFields(BaseModel):
+    trade_date: Optional[str] = None  # 交易日期
+    ts_code: Optional[str] = None  # 股票代码
+    industry: Optional[str] = None  # 所属行业
+    name: Optional[str] = None  # 股票名称
+    close: Optional[float] = None  # 收盘价
+    pct_chg: Optional[float] = None  # 涨跌幅
+    amount: Optional[float] = None  # 成交额
+    limit_amount: Optional[float] = None  # 板上成交金额(涨停无此数据)
+    float_mv: Optional[float] = None  # 流通市值
+    total_mv: Optional[float] = None  # 总市值
+    turnover_ratio: Optional[float] = None  # 换手率
+    fd_amount: Optional[float] = None  # 封单金额
+    first_time: Optional[str] = None  # 首次封板时间（跌停无此数据）
+    last_time: Optional[str] = None  # 最后封板时间
+    open_times: Optional[int] = None  # 炸板次数(跌停为开板次数)
+    up_stat: Optional[str] = None  # 涨停统计（N/T T天有N次涨停）
+    limit_times: Optional[int] = None  # 连板数
+    limit: Optional[str] = None  # D跌停U涨停Z炸板
+
+LimitListResponse = TushareResponse[List[LimitListFields]]
+
+class DailyBasicParams(BaseModel):
+    ts_code: Optional[str] = None  # 股票代码（二选一）
+    trade_date: Optional[str] = None  # 交易日期 （二选一）
+    start_date: Optional[str] = None  # 开始日期(YYYYMMDD)
+    end_date: Optional[str] = None  # 结束日期(YYYYMMDD)
+
+DailyBasicRequest = TushareRequest[DailyBasicParams]
+
+class DailyBasicFields(BaseModel):
+    ts_code: Optional[str] = None  # TS股票代码
+    trade_date: Optional[str] = None  # 交易日期
+    close: Optional[float] = None  # 当日收盘价
+    turnover_rate: Optional[float] = None  # 换手率（%）
+    turnover_rate_f: Optional[float] = None  # 换手率（自由流通股）
+    volume_ratio: Optional[float] = None  # 量比
+    pe: Optional[float] = None  # 市盈率（总市值/净利润， 亏损的PE为空）
+    pe_ttm: Optional[float] = None  # 市盈率（TTM，亏损的PE为空）
+    pb: Optional[float] = None  # 市净率（总市值/净资产）
+    ps: Optional[float] = None  # 市销率
+    ps_ttm: Optional[float] = None  # 市销率（TTM）
+    dv_ratio: Optional[float] = None  # 股息率 （%）
+    dv_ttm: Optional[float] = None  # 股息率（TTM）（%）
+    total_share: Optional[float] = None  # 总股本 （万股）
+    float_share: Optional[float] = None  # 流通股本 （万股）
+    free_share: Optional[float] = None  # 自由流通股本 （万）
+    total_mv: Optional[float] = None  # 总市值 （万元）
+    circ_mv: Optional[float] = None  # 流通市值（万元）
+
+DailyBasicResponse = TushareResponse[List[DailyBasicFields]]
+
+class IndexMemberParams(BaseModel):
+    index_code: Optional[str] = None  # 指数代码
+    ts_code: Optional[str] = None  # 股票代码
+    is_new: Optional[str] = None  # 是否最新（默认为“Y是”）
+
+IndexMemberRequest = TushareRequest[IndexMemberParams]
+
+class IndexMemberFields(BaseModel):
+    index_code: Optional[str] = None  # 指数代码
+    index_name: Optional[str] = None  # 指数名称
+    con_code: Optional[str] = None  # 成分股票代码
+    con_name: Optional[str] = None  # 成分股票名称
+    in_date: Optional[str] = None  # 纳入日期
+    out_date: Optional[str] = None  # 剔除日期
+    is_new: Optional[str] = None  # 是否最新Y是N否
+
+IndexMemberResponse = TushareResponse[List[IndexMemberFields]]
+
+class DailyInfoParams(BaseModel):
+    trade_date: Optional[str] = None  # 交易日期（YYYYMMDD格式，下同）
+    ts_code: Optional[str] = None  # 板块代码（请参阅下方列表）
+    exchange: Optional[str] = None  # 股票市场（SH上交所 SZ深交所）
+    start_date: Optional[str] = None  # 开始日期
+    end_date: Optional[str] = None  # 结束日期
+    fields: Optional[str] = None  # 指定提取字段
+
+DailyInfoRequest = TushareRequest[DailyInfoParams]
+
+class DailyInfoFields(BaseModel):
+    trade_date: Optional[str] = None  # 交易日期
+    ts_code: Optional[str] = None  # 市场代码
+    ts_name: Optional[str] = None  # 市场名称
+    com_count: Optional[int] = None  # 挂牌数
+    total_share: Optional[float] = None  # 总股本（亿股）
+    float_share: Optional[float] = None  # 流通股本（亿股）
+    total_mv: Optional[float] = None  # 总市值（亿元）
+    float_mv: Optional[float] = None  # 流通市值（亿元）
+    amount: Optional[float] = None  # 交易金额（亿元）
+    vol: Optional[float] = None  # 成交量（亿股）
+    trans_count: Optional[int] = None  # 成交笔数（万笔）
+    pe: Optional[float] = None  # 平均市盈率
+    tr: Optional[float] = None  # 换手率（％），注：深交所暂无此列
+    exchange: Optional[str] = None  # 交易所（SH上交所 SZ深交所）
+
+DailyInfoResponse = TushareResponse[List[DailyInfoFields]]
+
+class ThsIndexParams(BaseModel):
+    ts_code: Optional[str] = None  # 指数代码
+    exchange: Optional[str] = None  # 市场类型A-a股 HK-港股 US-美股
+    type: Optional[str] = None  # 指数类型 N-板块指数 I-行业指数 R-地域指数 S-同花顺特色指数
+
+ThsIndexRequest = TushareRequest[ThsIndexParams]
+
+class ThsIndexFields(BaseModel):
+    ts_code: Optional[str] = None  # 代码
+    name: Optional[str] = None  # 名称
+    count: Optional[int] = None  # 成分个数
+    exchange: Optional[str] = None  # 交易所
+    list_date: Optional[str] = None  # 上市日期
+    type: Optional[str] = None  # N概念指数S特色指数
+
+ThsIndexResponse = TushareResponse[List[ThsIndexFields]]
+
+class ThsDailyParams(BaseModel):
+    ts_code: Optional[str] = None  # 指数代码
+    trade_date: Optional[str] = None  # 交易日期（YYYYMMDD格式，下同）
+    start_date: Optional[str] = None  # 开始日期
+    end_date: Optional[str] = None  # 结束日期
+
+ThsDailyRequest = TushareRequest[ThsDailyParams]
+
+class ThsDailyFields(BaseModel):
+    ts_code: Optional[str] = None  # TS指数代码
+    trade_date: Optional[str] = None  # 交易日
+    close: Optional[float] = None  # 收盘点位
+    open: Optional[float] = None  # 开盘点位
+    high: Optional[float] = None  # 最高点位
+    low: Optional[float] = None  # 最低点位
+    pre_close: Optional[float] = None  # 昨日收盘点
+    avg_price: Optional[float] = None  # 平均价
+    change: Optional[float] = None  # 涨跌点位
+    pct_change: Optional[float] = None  # 涨跌幅
+    vol: Optional[float] = None  # 成交量
+    turnover_rate: Optional[float] = None  # 换手率
+    total_mv: Optional[float] = None  # 总市值
+    float_mv: Optional[float] = None  # 流通市值
+
+ThsDailyResponse = TushareResponse[List[ThsDailyFields]]
+
+class ThsMemberParams(BaseModel):
+    ts_code: Optional[str] = None  # 板块指数代码
+    code: Optional[str] = None  # 股票代码
+
+ThsMemberRequest = TushareRequest[ThsMemberParams]
+
+class ThsMemberFields(BaseModel):
+    ts_code: Optional[str] = None  # 指数代码
+    code: Optional[str] = None  # 股票代码
+    name: Optional[str] = None  # 股票名称
+    weight: Optional[float] = None  # 权重(暂无)
+    in_date: Optional[str] = None  # 纳入日期(暂无)
+    out_date: Optional[str] = None  # 剔除日期(暂无)
+    is_new: Optional[str] = None  # 是否最新Y是N否
+
+ThsMemberResponse = TushareResponse[List[ThsMemberFields]]
+

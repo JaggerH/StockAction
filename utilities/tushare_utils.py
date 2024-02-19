@@ -21,10 +21,10 @@ async def fetch_tushare_data(api_name: str, params: Optional[dict], fields: list
         
         return response.json()
 
-def generic_transform_tushare_data(response_data: dict, model: Type[BaseModel]) -> List[BaseModel]:
+def generic_transform_tushare_data(response_data: dict) -> List[BaseModel]:
     if not response_data.get('data') or not response_data['data'].get('items'):
         return []
 
     fields = response_data['data']['fields']
     items = response_data['data']['items']
-    return [model(**dict(zip(fields, item))) for item in items]
+    return [dict(zip(fields, item)) for item in items]

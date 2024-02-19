@@ -1,9 +1,10 @@
 from fastapi import FastAPI
-from .routes import actions
+from .routes import actions, tushare_actions
 
 app = FastAPI(title="ChatGPT Stock Action", servers=[{"url": "https://chatgpt-stock-action.azurewebsites.net"}])
 
 app.include_router(actions.router)
+app.include_router(tushare_actions.router)
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
