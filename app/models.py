@@ -6,11 +6,11 @@ from utilities.tushare_models import *
 class AnnouncementRequest(BaseModel):
     market: Optional[str] = None #深沪京 
     tabName: Optional[str] = None #公告
-    plate: Optional[List[str]] = None #板块
+    plate: Optional[List[str]] = [] #板块
     category: Optional[List[str]] = None #公告分类
-    industry: Optional[List[str]] = None #行业
+    industry: Optional[List[str]] = [] #行业
     stock: Optional[List[str]] = None #股票代码
-    searchkey: Optional[str] = None #标题关键字
+    searchkey: Optional[str] = '' #标题关键字
     seDate: Optional[str] = None #起始时间
 
 class Announcement(BaseModel):
