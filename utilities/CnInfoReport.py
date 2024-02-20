@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# reference from https://github.com/tr1s7an/CnInfoReports
 import httpx
 import os
 import json
@@ -138,32 +138,3 @@ class CnInfoReports:
                 time.sleep(random.randint(1, 4))
         else:
             self.logger.warning(f'【{sec_code}】文件已存在，跳过下载：{pdf_path}')
-
-
-if __name__ == '__main__':
-    #设置日志样式
-    logger = logging.getLogger('CnInfoReports')
-    logger.setLevel(logging.DEBUG)
-    sh = logging.StreamHandler(stdout)
-    sh.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s - %(message)s'))
-    logger.addHandler(sh)
-
-    #初始化并调用
-    instance = CnInfoReports(skip_download_stock_json=True)
-    filter1 = {
-        'market': 'szse',  #深沪京
-        'tabName': 'fulltext',  #公告
-        'plate': [],  #板块
-        'category': ['category_ndbg_szsh'],  #公告分类
-        'industry': [],  #行业
-        'stock': [
-            "000063",
-            "002709",
-            "002371",
-        ],  #股票代码
-        'searchkey': '',  #标题关键字
-        'seDate': '2022-01-01~2023-06-23',  #起始时间
-    }
-
-    result = instance.query_announcements_info(filter1)
-    print(result)

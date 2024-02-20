@@ -48,3 +48,6 @@ python .\utilities\tushare_api_capture.py
 | 同花顺概念和行业指数 | ths_index | ThsIndex | [链接](https://tushare.pro/document/2?doc_id=259) |
 | 同花顺板块指数行情 | ths_daily | ThsDaily | [链接](https://tushare.pro/document/2?doc_id=260) |
 | 同花顺概念板块成分 | ths_member | ThsMember | [链接](https://tushare.pro/document/2?doc_id=261) |
+
+# Reference
+[tr1s7an/CnInfoReports](https://github.com/tr1s7an/CnInfoReports)
