@@ -4,7 +4,7 @@ from pydantic.generics import GenericModel
 from utilities.tushare_models import *
 
 class AnnouncementRequest(BaseModel):
-    market: Optional[str] = None #深沪京 
+    market: Optional[str] = '' #深沪京 
     tabName: Optional[str] = None #公告
     plate: Optional[List[str]] = [] #板块
     category: Optional[List[str]] = None #公告分类

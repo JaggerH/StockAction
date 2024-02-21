@@ -28,7 +28,7 @@ class CnInfoReports:
             'Referer': 'http://www.cninfo.com.cn/new/commonUrl/pageOfSearch?url=disclosure/list/search&lastPage=index',
         }
         self.max_threads = max_threads
-        self.timeout = httpx.Timeout(60.0)
+        self.timeout = httpx.Timeout(10.0)
         self.logger = logging.getLogger('CnInfoReports')
         self.column_to_market = {'szse': 'szse', 'hke': 'hke', 'gfzr': 'third', 'fund': 'fund', 'bond': 'bond'}  #key是json的地址，value是对应的market查询参数
         if skip_download_stock_json:
