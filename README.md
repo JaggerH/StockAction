@@ -3,14 +3,25 @@
 I decide to use azure to hold my service, so this is the recommand method now.
 I use Visual Studio Code, refer to the repo:
 [fastapi-on-azure-functions](https://github.com/Azure-Samples/fastapi-on-azure-functions/) 
-## Use docker
-### STEP 1. start docker
+## Start Service
+### Option 1. Use docker
 ```
 docker-compose up
 ```
-### STEP 2. run web server
-If you are using venv, set envrionment first.
+### Option 2. Use venv
+set virtual environment
 ```
+python3 -m venv .venv
+./.venv/bin/active
+pip install -r requirements.txt
+```
+set environment variables
+```
+# macOS
+export LOGIN_API_KEY=YOUR_API_KEY
+export TUSHARE_API_KEY=YOUR_API_KEY
+
+# windows
 $env:LOGIN_API_KEY='YOUR_API_KEY'
 $env:TUSHARE_API_KEY='YOUR_API_KEY'
 ```
