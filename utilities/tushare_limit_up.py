@@ -64,36 +64,66 @@ def prepare_df(df):
     limit_up_df_copy['total_mv'] = limit_up_df_copy['total_mv'] * 10000 # 总值 原单位应是万
 
     # 将金额单位全部换成亿
-    limit_up_df_copy['amount'] = round(limit_up_df_copy['amount'] / 10000 / 10000, 2)
-    limit_up_df_copy['limit_amount'] = round(limit_up_df_copy['limit_amount'] / 10000 / 10000, 2)
-    limit_up_df_copy['circ_mv'] = round(limit_up_df_copy['circ_mv'] / 10000 / 10000, 2)
-    limit_up_df_copy['total_mv'] = round(limit_up_df_copy['total_mv'] / 10000 / 10000, 2)
-    limit_up_df_copy['fd_amount'] = round(limit_up_df_copy['fd_amount'] / 10000 / 10000, 2)
+    limit_up_df_copy['amount'] = limit_up_df_copy['amount'] / 10000 / 10000
+    limit_up_df_copy['limit_amount'] = limit_up_df_copy['limit_amount'] / 10000 / 10000
+    limit_up_df_copy['circ_mv'] = limit_up_df_copy['circ_mv'] / 10000 / 10000
+    limit_up_df_copy['total_mv'] = limit_up_df_copy['total_mv'] / 10000 / 10000
+    limit_up_df_copy['fd_amount'] = limit_up_df_copy['fd_amount'] / 10000 / 10000
 
     columns_sequence = columns_mapping.keys()
     limit_up_df_copy = limit_up_df_copy.reindex(columns=columns_sequence)
     # Rename the columns using the mapping
     return limit_up_df_copy.rename(columns=columns_mapping)
 
-def build_xlsx(df, cal_date):
-    from openpyxl import Workbook
+def build_xlsx(df, path):
+    print(df)
+    df.to_excel(path, index=False)
+
+def beautify_xlsx(path):
+    import openpyxl
     from openpyxl.utils.dataframe import dataframe_to_rows
-    from openpyxl.styles import numbers
+    from openpyxl.styles import Alignment
 
     # Create a new Excel file with formatted values
-    wb = Workbook()
+    wb = openpyxl.load_workbook(path)
     ws = wb.active
-
-    for r in dataframe_to_rows(df, index=False, header=True):
-        ws.append(r)
-
+    # 冻结行首
     ws.freeze_panes = 'A2'
-    # Save the workbook
-    excel_file_path = './涨停分析-%s.xlsx' % cal_date
-    wb.save(excel_file_path)
-    print("已写入路径：" + excel_file_path)
 
-def generate_limit_up(specific_date=None):
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            if cell.column_letter in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'N']:
+                if cell.value is not None:
+                    cell.value = round(cell.value, 2)
+                    cell.number_format = '0.00'
+
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter  # Get the column name
+        for cell in col:
+            try:  # Necessary to avoid error on empty cells
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+                    if all('\u4e00' <= char <= '\u9fff' for char in str(cell.value)):
+                        max_length += 1
+            except:
+                pass
+        if column in ["B", "C"]: # 含中文字符的列，宽度要额外适配
+            adjusted_width = max_length * 2 + 2
+        else:
+            adjusted_width = max_length + 2
+        ws.column_dimensions[column].width = adjusted_width
+
+    # 表头自动换行且居中
+    for row in ws.iter_rows(min_row=1, max_row=1):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
+
+    # Save the workbook
+    wb.save(path)
+    print("已写入路径：" + path)
+
+def generate_limit_up(specific_date=None, path=None):
     if os.getenv("ENV") != "product":
         # 在开发环境中加载 .env 文件
         load_dotenv(override=True)
@@ -112,4 +142,7 @@ def generate_limit_up(specific_date=None):
 
     df = getLimitUpData(pro, cal_date)
     df = prepare_df(df)
-    build_xlsx(df, cal_date)
+
+    excel_file_path = './涨停分析-%s.xlsx' % cal_date if path is None else path
+    build_xlsx(df, excel_file_path)
+    beautify_xlsx(excel_file_path)
