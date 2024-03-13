@@ -73,10 +73,10 @@ def prepare_df(df):
     columns_sequence = columns_mapping.keys()
     limit_up_df_copy = limit_up_df_copy.reindex(columns=columns_sequence)
     # Rename the columns using the mapping
-    return limit_up_df_copy.rename(columns=columns_mapping)
+    return limit_up_df_copy
 
 def build_xlsx(df, path):
-    print(df)
+    df = df.rename(columns=columns_mapping)
     df.to_excel(path, index=False)
 
 def beautify_xlsx(path):
@@ -123,7 +123,7 @@ def beautify_xlsx(path):
     wb.save(path)
     print("已写入路径：" + path)
 
-def generate_limit_up(specific_date=None, path=None):
+def generate_limit_up_df(specific_date=None):
     if os.getenv("ENV") != "product":
         # 在开发环境中加载 .env 文件
         load_dotenv(override=True)
@@ -142,7 +142,13 @@ def generate_limit_up(specific_date=None, path=None):
 
     df = getLimitUpData(pro, cal_date)
     df = prepare_df(df)
+    return df, cal_date
 
+def generate_limit_up_excel(df, cal_date, path=None):
+    """
+        在运行该函数前需要运行 generate_limit_up_df 获取数据
+        df, cal_date = generate_limit_up_df()
+    """
     excel_file_path = './涨停分析-%s.xlsx' % cal_date if path is None else path
     build_xlsx(df, excel_file_path)
     beautify_xlsx(excel_file_path)
