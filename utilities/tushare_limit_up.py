@@ -2,7 +2,6 @@ import os
 import tushare as ts
 import pandas as pd
 from datetime import datetime
-from dotenv import load_dotenv
 
 # Mapping English column names to Chinese
 columns_mapping = {
@@ -27,33 +26,6 @@ columns_mapping = {
     'up_stat': '涨停统计',
     'limit_times': '连板数',
 }
-
-# 获取交易日历
-def getLatestTradeData(pro, today_str):
-    """
-        如果今天不是交易日期，将返回最近交易日
-    """
-    df = pro.trade_cal(**{ "exchange": "SSE", "cal_date": today_str }, fields=[ "exchange", "cal_date", "is_open", "pretrade_date" ])
-    row = df.loc[0]
-    return row['pretrade_date'] if row['is_open'] == 0 else row['cal_date']
-
-# 涨停数据
-def getLimitUpData(pro, cal_date):
-    limit_up_df = pro.limit_list_d(**{ "trade_date": cal_date, "limit_type": "U", }, fields=[ "trade_date", "ts_code", "limit_amount", "fd_amount", "first_time", "last_time", "open_times", "up_stat", "limit_times", "limit" ])
-    daily_df = pro.daily(**{"trade_date": cal_date}, fields=[ "ts_code", "trade_date", "open", "high", "low", "close", "pre_close", "change", "pct_chg", "vol", "amount" ])
-    tenpct_df = daily_df[daily_df['pct_chg'] >= 10]
-
-    stock_basic_df = pro.stock_basic(**{"list_status": 'L'}, fields=['ts_code','name','industry'])
-    daily_basic_df = pro.daily_basic(**{"trade_date": cal_date}, fields=['ts_code','trade_date','circ_mv','total_mv','turnover_rate','turnover_rate_f','pe','pb'])
-
-    # 合并tenpct_df和limit_up_df
-    union_tscode = pd.concat([tenpct_df['ts_code'], limit_up_df['ts_code']]).drop_duplicates()
-    union_tscode_df = daily_df[daily_df['ts_code'].isin(union_tscode)]
-    merged_df = pd.merge(union_tscode_df, stock_basic_df, on=['ts_code'], how='left')
-    merged_df = pd.merge(merged_df, daily_basic_df, on=['ts_code'], how='left')
-    merged_df = pd.merge(merged_df, limit_up_df, on=['ts_code'], how='outer')
-
-    return merged_df
 
 def prepare_df(df):
     # Order the DataFrame by 'limit_times' in descending order
@@ -121,30 +93,9 @@ def beautify_xlsx(path):
 
     # Save the workbook
     wb.save(path)
-    print("已写入路径：" + path)
+    return path
 
-def generate_limit_up_df(specific_date=None):
-    if os.getenv("ENV") != "product":
-        # 在开发环境中加载 .env 文件
-        load_dotenv(override=True)
-
-    # 初始化pro接口
-    token = os.getenv('TUSHARE_API_KEY')
-    pro = ts.pro_api(token)
-
-    # 如果有指定日期，使用指定日期，否则使用最近的交易日
-    if specific_date:
-        cal_date = specific_date
-    else:
-        # Generate today's date in "yyyymmdd" format
-        today_str = datetime.now().strftime("%Y%m%d")
-        cal_date = getLatestTradeData(pro, today_str)
-
-    df = getLimitUpData(pro, cal_date)
-    df = prepare_df(df)
-    return df, cal_date
-
-def generate_limit_up_excel(df, cal_date, path=None):
+def generate_limit_up_excel(df, cal_date, path=None) -> str:
     """
         在运行该函数前需要运行 generate_limit_up_df 获取数据
         df, cal_date = generate_limit_up_df()
@@ -152,3 +103,122 @@ def generate_limit_up_excel(df, cal_date, path=None):
     excel_file_path = './涨停分析-%s.xlsx' % cal_date if path is None else path
     build_xlsx(df, excel_file_path)
     beautify_xlsx(excel_file_path)
+
+    return excel_file_path
+
+def sendLimitUpEmail():
+    import logging
+    import datetime
+
+    from utilities.set_env import set_env
+    from utilities.azure_cosmos import init_container
+    from utilities.email_client import EmailClient
+    import azure.cosmos.exceptions as exceptions
+
+    set_env()
+    container = init_container()
+    instance = TushareLimitUp()
+    cal_date = instance.getLatestTradeData()
+    try:
+        # 如果能正常读取limit_up_identifier，那是已经发送过通知了
+        record = container.read_item(item=cal_date, partition_key="limit_up_identifier")
+        logging.info('limit up has created, skip.')
+    except exceptions.CosmosResourceNotFoundError:
+        df = instance.generate_limit_up_df()
+        if instance.limit_up_df.empty or instance.daily_basic_df.empty:
+            logging.info('tushare has not update')
+        else:
+            path = generate_limit_up_excel(df, cal_date)
+            logging.info('limit up file created at %s' % path)
+            try:
+                utc_timestamp = datetime.datetime.utcnow().replace(
+                    tzinfo=datetime.timezone.utc).isoformat()
+
+                email = EmailClient(
+                    os.getenv("SENDER_EMAIL"),
+                    os.getenv("SENDER_EMAIL_PASS"),
+                    os.getenv("RECEIVERS_EMAIL")
+                )
+                email.setSubject("%s涨停列表" % cal_date)
+                email.addContent("请查阅附件。\n\n")
+                email.addContent("顺颂商祺")
+                email.addAttachment(path)
+                email.sendMail()
+                os.remove(path)
+                logging.info('email has sent')
+
+                has_send_notify = {
+                    "id": instance.cal_date,
+                    "partitionKey": "limit_up_identifier",
+                    "is_send_notify": True,
+                    "created_at": utc_timestamp
+                }
+                container.create_item(body=has_send_notify)
+            except Exception as e:
+                logging.error("An error occurred", exc_info=True)
+
+def deleteEmailSentFlag():
+    from utilities.azure_cosmos import init_container
+    import azure.cosmos.exceptions as exceptions
+
+    container = init_container()
+    instance = TushareLimitUp()
+    cal_date = instance.getLatestTradeData()
+    try:
+        container.delete_item(item=cal_date, partition_key="limit_up_identifier")
+        print('limit_up_identifier %s has_send_notify flag is deleted' % cal_date)
+    except exceptions.CosmosResourceNotFoundError:
+        return False
+
+class TushareLimitUp:
+    def __init__(self) -> None:
+        token = os.getenv('TUSHARE_API_KEY')
+        self.pro = ts.pro_api(token)
+        self.isReadTushare = False
+
+    # 获取交易日历
+    def getLatestTradeData(self, specific_date=None) -> str:
+        """
+            如果今天不是交易日期，将返回最近交易日
+        """
+        today_str = specific_date if specific_date is not None else datetime.now().strftime("%Y%m%d")
+        df = self.pro.trade_cal(**{ "exchange": "SSE", "cal_date": today_str }, fields=[ "exchange", "cal_date", "is_open", "pretrade_date" ])
+        row = df.loc[0]
+        return row['pretrade_date'] if row['is_open'] == 0 else row['cal_date']
+
+    def readTushareData(self, cal_date) -> None:
+        self.limit_up_df = self.pro.limit_list_d(**{ "trade_date": cal_date, "limit_type": "U", }, fields=[ "trade_date", "ts_code", "limit_amount", "fd_amount", "first_time", "last_time", "open_times", "up_stat", "limit_times", "limit" ])
+        self.daily_df = self.pro.daily(**{"trade_date": cal_date}, fields=[ "ts_code", "trade_date", "open", "high", "low", "close", "pre_close", "change", "pct_chg", "vol", "amount" ])
+
+        self.stock_basic_df = self.pro.stock_basic(**{"list_status": 'L'}, fields=['ts_code','name','industry'])
+        self.daily_basic_df = self.pro.daily_basic(**{"trade_date": cal_date}, fields=['ts_code','trade_date','circ_mv','total_mv','turnover_rate','turnover_rate_f','pe','pb'])
+        self.isReadTushare = True
+
+    # 涨停数据
+    def getLimitUpData(self, cal_date) -> pd.DataFrame:
+        """
+            Tushare生成imit_list_d数据时间段不固定，但是limit_list_d出来之前，会缺失涨停数据
+            如果检测到数据不为空，会写入数据库
+        """
+        # 读取过就不再重复读取，要强制就在执行readTushareData之前把isReadTushare设置为False
+        if not self.isReadTushare:
+            self.readTushareData(cal_date)
+            
+        self.tenpct_df = self.daily_df[self.daily_df['pct_chg'] >= 10]
+
+        # 合并tenpct_df和limit_up_df
+        union_tscode = pd.concat([self.tenpct_df['ts_code'], self.limit_up_df['ts_code']]).drop_duplicates()
+        union_tscode_df = self.daily_df[self.daily_df['ts_code'].isin(union_tscode)]
+        merged_df = pd.merge(union_tscode_df, self.stock_basic_df, on=['ts_code'], how='left')
+        merged_df = pd.merge(merged_df, self.daily_basic_df, on=['ts_code'], how='left')
+        merged_df = pd.merge(merged_df, self.limit_up_df, on=['ts_code'], how='outer')
+
+        return merged_df
+
+    def generate_limit_up_df(self, specific_date=None) -> pd.DataFrame:
+        # 如果有指定日期，使用指定日期，否则使用最近的交易日
+        self.cal_date = self.getLatestTradeData(specific_date)
+
+        df = self.getLimitUpData(self.cal_date)
+        df = prepare_df(df)
+        return df
