@@ -18,7 +18,7 @@ columns_mapping = {
     'pe': 'PE',
     'turnover_rate': '换手率',
     'turnover_rate_f': '流通股换手率',
-    'limit_amount': '板上成交金额(亿)',
+    # 'limit_amount': '板上成交金额(亿)',
     'fd_amount': '封单金额(亿)',
     'first_time': '首次封板时间',
     'last_time': '最后封板时间',
@@ -48,14 +48,33 @@ def prepare_df(df):
     return limit_up_df_copy
 
 def build_xlsx(df, path):
+    # 定义一个函数将 name 转换为超链接格式
+    def make_name_hyperlink(row):
+        if row["name"].startswith("=HYPERLINK"):
+            return row["name"]
+        symbol, exchange = row['ts_code'].split(".")
+        url = f'https://quote.eastmoney.com/{exchange.lower() + symbol}.html'
+        return f'=HYPERLINK("{url}", "{row["name"]}")'
+    
+    def make_industry_hyperlink(row):
+        if row["industry"].startswith("=HYPERLINK"):
+            return row["industry"]
+        symbol, exchange = row['ts_code'].split(".")
+        url = f'https://emweb.securities.eastmoney.com/pc_hsf10/pages/index.html?type=web&code={exchange + symbol}&color=b#/hxtc'
+        return f'=HYPERLINK("{url}", "{row["industry"]}")'
+
+    # 应用函数到 name 列
+    df['name'] = df.apply(make_name_hyperlink, axis=1)
+    df['industry'] = df.apply(make_industry_hyperlink, axis=1)
+
     df = df.rename(columns=columns_mapping)
     df.to_excel(path, index=False)
 
 def beautify_xlsx(path):
     import openpyxl
-    from openpyxl.utils.dataframe import dataframe_to_rows
     from openpyxl.styles import Alignment
-
+    from openpyxl.utils import get_column_letter
+    
     # Create a new Excel file with formatted values
     wb = openpyxl.load_workbook(path)
     ws = wb.active
@@ -64,27 +83,27 @@ def beautify_xlsx(path):
 
     for row in ws.iter_rows(min_row=2):
         for cell in row:
-            if cell.column_letter in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'N']:
+            if cell.column_letter in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']:
                 if cell.value is not None:
                     cell.value = round(cell.value, 2)
                     cell.number_format = '0.00'
 
-    for col in ws.columns:
-        max_length = 0
-        column = col[0].column_letter  # Get the column name
+    for idx, col in enumerate(ws.columns, 1):
+        max_length = 5
+        column = get_column_letter(idx)  # Get the column name
         for cell in col:
             try:  # Necessary to avoid error on empty cells
                 if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-                    if all('\u4e00' <= char <= '\u9fff' for char in str(cell.value)):
-                        max_length += 1
+                    max_length = len(cell.value)
             except:
                 pass
-        if column in ["B", "C"]: # 含中文字符的列，宽度要额外适配
-            adjusted_width = max_length * 2 + 2
+        
+        # 特殊列，含中文字符、表达式，宽度自动适配
+        if column in ["B", "C"]: 
+            ws.column_dimensions[get_column_letter(idx)].auto_size = True
         else:
-            adjusted_width = max_length + 2
-        ws.column_dimensions[column].width = adjusted_width
+            adjusted_width = max_length + 4
+            ws.column_dimensions[column].width = adjusted_width
 
     # 表头自动换行且居中
     for row in ws.iter_rows(min_row=1, max_row=1):
