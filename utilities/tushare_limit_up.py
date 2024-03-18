@@ -119,7 +119,8 @@ def generate_limit_up_excel(df, cal_date, path=None) -> str:
         在运行该函数前需要运行 generate_limit_up_df 获取数据
         df, cal_date = generate_limit_up_df()
     """
-    excel_file_path = '/tmp/涨停分析-%s.xlsx' % cal_date if path is None else path
+    template_path = '/tmp/涨停分析-%s.xlsx' if os.getenv("ENV") == "product" else './涨停分析-%s.xlsx'
+    excel_file_path = template_path % cal_date if path is None else path
     build_xlsx(df, excel_file_path)
     beautify_xlsx(excel_file_path)
 
