@@ -119,7 +119,7 @@ def generate_limit_up_excel(df, cal_date, path=None) -> str:
         在运行该函数前需要运行 generate_limit_up_df 获取数据
         df, cal_date = generate_limit_up_df()
     """
-    excel_file_path = './涨停分析-%s.xlsx' % cal_date if path is None else path
+    excel_file_path = '/tmp/涨停分析-%s.xlsx' % cal_date if path is None else path
     build_xlsx(df, excel_file_path)
     beautify_xlsx(excel_file_path)
 
@@ -143,13 +143,14 @@ def sendLimitUpEmail():
         record = container.read_item(item=cal_date, partition_key="limit_up_identifier")
         logging.info('limit up has created, skip.')
     except exceptions.CosmosResourceNotFoundError:
-        df = instance.generate_limit_up_df()
-        if instance.limit_up_df.empty or instance.daily_basic_df.empty:
-            logging.info('tushare has not update')
-        else:
-            path = generate_limit_up_excel(df, cal_date)
-            logging.info('limit up file created at %s' % path)
-            try:
+        try:
+            df = instance.generate_limit_up_df()
+            if instance.limit_up_df.empty or instance.daily_basic_df.empty:
+                logging.info('tushare has not update')
+            else:
+                path = generate_limit_up_excel(df, cal_date)
+                logging.info('limit up file created at %s' % path)
+
                 utc_timestamp = datetime.datetime.utcnow().replace(
                     tzinfo=datetime.timezone.utc).isoformat()
 
@@ -173,8 +174,8 @@ def sendLimitUpEmail():
                     "created_at": utc_timestamp
                 }
                 container.create_item(body=has_send_notify)
-            except Exception as e:
-                logging.error("An error occurred", exc_info=True)
+        except Exception as e:
+            logging.error("An error occurred", exc_info=True)
 
 def deleteEmailSentFlag():
     from utilities.azure_cosmos import init_container
