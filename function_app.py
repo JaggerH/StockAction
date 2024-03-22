@@ -7,7 +7,8 @@ from utilities.tushare_limit_up import sendLimitUpEmail
 
 app = func.AsgiFunctionApp(app=fastapi_app, http_auth_level=func.AuthLevel.ANONYMOUS)
 
-@app.schedule(schedule="0 */5 16-19 * * 1-5", arg_name="myTimer", run_on_startup=True,
+# 时间对应中国时间下午16-19点
+@app.schedule(schedule="0 */5 8-11 * * 1-5", arg_name="myTimer", run_on_startup=True,
               use_monitor=False) 
 def LimitUpNotification(myTimer: func.TimerRequest) -> None:
     sendLimitUpEmail()
