@@ -47,7 +47,7 @@ def prepare_df(df):
     # Rename the columns using the mapping
     return limit_up_df_copy
 
-def build_xlsx(df, path):
+def build_xlsx(df, path, ths_concept=None):
     # 定义一个函数将 name 转换为超链接格式
     def make_name_hyperlink(row):
         if row["name"].startswith("=HYPERLINK"):
@@ -63,9 +63,21 @@ def build_xlsx(df, path):
         url = f'https://emweb.securities.eastmoney.com/pc_hsf10/pages/index.html?type=web&code={exchange + symbol}&color=b#/hxtc'
         return f'=HYPERLINK("{url}", "{row["industry"]}")'
 
+    def make_industry_by_concept(row):
+        code = row['ts_code']
+        concept_df = ths_concept[ths_concept['code'] == code]
+        # 按绝对值降序排列
+        concept_df = concept_df.reindex(concept_df.sort_values(by='pct_change', key=abs, ascending=False).index)
+        concept_df = concept_df[:3] # 只取前三项，多了显示麻烦
+        return '\n'.join(concept_df.apply(lambda row: f"{row['concept']}({row['pct_change']: .2f}%)", axis=1))
+
     # 应用函数到 name 列
     df['name'] = df.apply(make_name_hyperlink, axis=1)
-    df['industry'] = df.apply(make_industry_hyperlink, axis=1)
+
+    # 由于更新了详细的相关概念，原有的超链接关闭
+    # df['industry'] = df.apply(make_industry_hyperlink, axis=1)
+    if ths_concept is not None:
+        df['industry'] = df.apply(make_industry_by_concept, axis=1)
 
     df = df.rename(columns=columns_mapping)
     df.to_excel(path, index=False)
@@ -83,7 +95,7 @@ def beautify_xlsx(path):
 
     for row in ws.iter_rows(min_row=2):
         for cell in row:
-            if cell.column_letter in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']:
+            if cell.column_letter in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']:
                 if cell.value is not None:
                     cell.value = round(cell.value, 2)
                     cell.number_format = '0.00'
@@ -93,6 +105,8 @@ def beautify_xlsx(path):
         column = get_column_letter(idx)  # Get the column name
         for cell in col:
             try:  # Necessary to avoid error on empty cells
+                if column in ["C"]: 
+                    cell.alignment = Alignment(wrap_text=True)
                 if len(str(cell.value)) > max_length:
                     max_length = len(cell.value)
             except:
@@ -100,6 +114,8 @@ def beautify_xlsx(path):
         
         # 特殊列，含中文字符、表达式，宽度自动适配
         if column in ["B", "C"]: 
+            if column in ["C"]: 
+                ws.column_dimensions[column].width = 20
             ws.column_dimensions[get_column_letter(idx)].auto_size = True
         else:
             adjusted_width = max_length + 4
@@ -113,15 +129,14 @@ def beautify_xlsx(path):
     # Save the workbook
     wb.save(path)
     return path
-
-def generate_limit_up_excel(df, cal_date, path=None) -> str:
+def generate_limit_up_excel(df, cal_date, path=None, ths_concepts=None) -> str:
     """
         在运行该函数前需要运行 generate_limit_up_df 获取数据
         df, cal_date = generate_limit_up_df()
     """
     template_path = '/tmp/涨停分析-%s.xlsx' if os.getenv("ENV") == "product" else './涨停分析-%s.xlsx'
     excel_file_path = template_path % cal_date if path is None else path
-    build_xlsx(df, excel_file_path)
+    build_xlsx(df, excel_file_path, ths_concepts)
     beautify_xlsx(excel_file_path)
 
     return excel_file_path
@@ -146,10 +161,11 @@ def sendLimitUpEmail():
     except exceptions.CosmosResourceNotFoundError:
         try:
             df = instance.generate_limit_up_df()
+            ths_concept = instance.readThsConcept(cal_date)
             if instance.limit_up_df.empty or instance.daily_basic_df.empty:
                 logging.info('tushare has not update')
             else:
-                path = generate_limit_up_excel(df, cal_date)
+                path = generate_limit_up_excel(df, cal_date, ths_concept)
                 logging.info('limit up file created at %s' % path)
 
                 utc_timestamp = datetime.datetime.utcnow().replace(
@@ -196,6 +212,7 @@ class TushareLimitUp:
         token = os.getenv('TUSHARE_API_KEY')
         self.pro = ts.pro_api(token)
         self.isReadTushare = False
+        self.isReadThsConcept = False
 
     # 获取交易日历
     def getLatestTradeData(self, specific_date=None) -> str:
@@ -208,12 +225,31 @@ class TushareLimitUp:
         return row['pretrade_date'] if row['is_open'] == 0 else row['cal_date']
 
     def readTushareData(self, cal_date) -> None:
+        # 拉取数据
         self.limit_up_df = self.pro.limit_list_d(**{ "trade_date": cal_date, "limit_type": "U", }, fields=[ "trade_date", "ts_code", "limit_amount", "fd_amount", "first_time", "last_time", "open_times", "up_stat", "limit_times", "limit" ])
         self.daily_df = self.pro.daily(**{"trade_date": cal_date}, fields=[ "ts_code", "trade_date", "open", "high", "low", "close", "pre_close", "change", "pct_chg", "vol", "amount" ])
 
         self.stock_basic_df = self.pro.stock_basic(**{"list_status": 'L'}, fields=['ts_code','name','industry'])
         self.daily_basic_df = self.pro.daily_basic(**{"trade_date": cal_date}, fields=['ts_code','trade_date','circ_mv','total_mv','turnover_rate','turnover_rate_f','pe','pb'])
+
         self.isReadTushare = True
+
+    def readThsConcept(self, cal_date) -> pd.DataFrame:
+        # 以下是同花顺概念
+        ## 取同花顺所有概念 exchange -> A-a股，type -> N-概念指数
+        self.ths_index = self.pro.ths_index(**{ "exchange": "A", "type": "N" }, fields=[ "ts_code", "name", "count", "exchange", "list_date", "type" ])
+        self.ths_index = self.ths_index.rename(columns={'name': 'concept'})
+        ## 取同花顺概念当日涨幅
+        self.ths_daily = self.pro.ths_daily(**{ "trade_date": cal_date }, fields=[ "ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "avg_price", "change", "pct_change", "vol", "turnover_rate" ])
+        self.ths_index = pd.merge(self.ths_index, self.ths_daily, on='ts_code', how='inner')
+
+        limit_up_df = self.getLimitUpData(cal_date)
+        self.ths_members = [ self.pro.ths_member(**{ "code": code }, fields=[ "ts_code", "code", "name" ]) for code in list(limit_up_df['ts_code']) ]
+        self.ths_members = pd.concat(self.ths_members, ignore_index=True)
+
+        self.ths_concept = pd.merge(self.ths_members, self.ths_index, on='ts_code', how='inner')
+        self.isReadThsConcept = True
+        return self.ths_concept
 
     # 涨停数据
     def getLimitUpData(self, cal_date) -> pd.DataFrame:
