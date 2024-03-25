@@ -150,6 +150,12 @@ def sendLimitUpEmail():
     from utilities.email_client import EmailClient
     import azure.cosmos.exceptions as exceptions
 
+    # for limit_up_trigger_validate
+    import uuid
+    utc_timestamp = datetime.datetime.utcnow().replace(
+        tzinfo=datetime.timezone.utc).isoformat()
+    # ------------------
+
     set_env()
     container = init_container()
     instance = TushareLimitUp()
@@ -157,17 +163,41 @@ def sendLimitUpEmail():
     try:
         # 如果能正常读取limit_up_identifier，那是已经发送过通知了
         record = container.read_item(item=cal_date, partition_key="limit_up_identifier")
+        # for limit_up_trigger_validate
+        container.create_item(body={
+            "id": str(uuid.uuid4()),
+            "partitionKey": "limit_up_trigger_validate",
+            'type': 'skip',
+            "log": 'limit up has created, skip.',
+            "created_at": utc_timestamp
+        })
         logging.info('limit up has created, skip.')
     except exceptions.CosmosResourceNotFoundError:
         try:
             df = instance.generate_limit_up_df()
-            ths_concept = instance.readThsConcept(cal_date)
+            ths_concepts = instance.readThsConcept(cal_date)
             if instance.limit_up_df.empty or instance.daily_basic_df.empty:
                 logging.info('tushare has not update')
+                # for limit_up_trigger_validate
+                container.create_item(body={
+                    "id": str(uuid.uuid4()),
+                    "partitionKey": "limit_up_trigger_validate",
+                    'type': 'skip',
+                    "log": 'tushare has not update',
+                    "created_at": utc_timestamp
+                })
             else:
-                path = generate_limit_up_excel(df, cal_date, ths_concept)
+                path = generate_limit_up_excel(df, cal_date, ths_concepts=ths_concepts)
                 logging.info('limit up file created at %s' % path)
-
+                # for limit_up_trigger_validate
+                container.create_item(body={
+                    "id": str(uuid.uuid4()),
+                    "partitionKey": "limit_up_trigger_validate",
+                    'type': 'success',
+                    "log": 'limit up file created at %s' % path,
+                    "created_at": utc_timestamp
+                })
+                
                 utc_timestamp = datetime.datetime.utcnow().replace(
                     tzinfo=datetime.timezone.utc).isoformat()
 
