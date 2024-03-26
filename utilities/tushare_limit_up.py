@@ -72,7 +72,7 @@ def build_xlsx(df, path, ths_concept=None):
         return '\n'.join(concept_df.apply(lambda row: f"{row['concept']}({row['pct_change']: .2f}%)", axis=1))
 
     # 应用函数到 name 列
-    df['name'] = df.apply(make_name_hyperlink, axis=1)
+    # df['name'] = df.apply(make_name_hyperlink, axis=1)
 
     # 由于更新了详细的相关概念，原有的超链接关闭
     # df['industry'] = df.apply(make_industry_hyperlink, axis=1)
