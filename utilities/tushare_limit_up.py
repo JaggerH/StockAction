@@ -175,8 +175,8 @@ def sendLimitUpEmail():
     except exceptions.CosmosResourceNotFoundError:
         try:
             df = instance.generate_limit_up_df()
-            ths_concepts = instance.readThsConcept(cal_date)
-            if instance.limit_up_df.empty or instance.daily_basic_df.empty:
+            ths_concepts_exist_df = instance.pro.ths_member(**{ "ts_code": 20240326, "limit": "10", }, fields=[ "ts_code", "code", "name" ])
+            if instance.limit_up_df.empty or instance.daily_basic_df.empty or ths_concepts_exist_df.empty:
                 logging.info('tushare has not update')
                 # for limit_up_trigger_validate
                 container.create_item(body={
@@ -187,6 +187,7 @@ def sendLimitUpEmail():
                     "created_at": utc_timestamp
                 })
             else:
+                ths_concepts = instance.readThsConcept(cal_date)
                 path = generate_limit_up_excel(df, cal_date, ths_concepts=ths_concepts)
                 logging.info('limit up file created at %s' % path)
                 # for limit_up_trigger_validate
