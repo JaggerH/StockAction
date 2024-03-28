@@ -175,8 +175,8 @@ def sendLimitUpEmail():
     except exceptions.CosmosResourceNotFoundError:
         try:
             df = instance.generate_limit_up_df()
-            ths_concepts_exist_df = instance.pro.ths_member(**{ "trade_date": cal_date }, fields=[ "ts_code", "code", "name" ])
-            if instance.limit_up_df.empty or instance.daily_basic_df.empty or len(ths_concepts_exist_df) < 5000:
+            ths_daily_exist_df = instance.pro.ths_daily(**{ "trade_date": cal_date }, fields=[ "ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "avg_price", "change", "pct_change", "vol", "turnover_rate" ])
+            if instance.limit_up_df.empty or instance.daily_basic_df.empty or ths_daily_exist_df.empty:
                 logging.info('tushare has not update')
                 # for limit_up_trigger_validate
                 container.create_item(body={
@@ -268,6 +268,7 @@ class TushareLimitUp:
     def readThsConcept(self, cal_date) -> pd.DataFrame:
         # 以下是同花顺概念
         ## 取同花顺所有概念 exchange -> A-a股，type -> N-概念指数
+        ### 目的时获取概念名称
         self.ths_index = self.pro.ths_index(**{ "exchange": "A", "type": "N" }, fields=[ "ts_code", "name", "count", "exchange", "list_date", "type" ])
         self.ths_index = self.ths_index.rename(columns={'name': 'concept'})
         ## 取同花顺概念当日涨幅
