@@ -176,7 +176,7 @@ def sendLimitUpEmail():
         try:
             df = instance.generate_limit_up_df()
             ths_daily_exist_df = instance.pro.ths_daily(**{ "trade_date": cal_date }, fields=[ "ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "avg_price", "change", "pct_change", "vol", "turnover_rate" ])
-            if instance.limit_up_df.empty or instance.daily_basic_df.empty or ths_daily_exist_df.empty:
+            if instance.limit_up_df.empty or instance.daily_basic_df.empty or len(ths_daily_exist_df) < 1180:
                 logging.info('tushare has not update')
                 # for limit_up_trigger_validate
                 container.create_item(body={
