@@ -129,6 +129,7 @@ def beautify_xlsx(path):
     # Save the workbook
     wb.save(path)
     return path
+
 def generate_limit_up_excel(df, cal_date, path=None, ths_concepts=None) -> str:
     """
         在运行该函数前需要运行 generate_limit_up_df 获取数据
@@ -141,20 +142,39 @@ def generate_limit_up_excel(df, cal_date, path=None, ths_concepts=None) -> str:
 
     return excel_file_path
 
+def createLog(container, type, log):
+    import uuid
+    import datetime
+
+    container.create_item(body={
+        "id": str(uuid.uuid4()),
+        "partitionKey": "limit_up_trigger_validate",
+        'type': type,
+        "log": log,
+        "created_at": datetime.datetime.utcnow().isoformat()
+    })
+
+def sendEmail(cal_date, path):
+    from utilities.email_client import EmailClient
+
+    email = EmailClient(
+        os.getenv("SENDER_EMAIL"),
+        os.getenv("SENDER_EMAIL_PASS"),
+        os.getenv("RECEIVERS_EMAIL")
+    )
+    email.setSubject("%s涨停列表" % cal_date)
+    email.addContent("请查阅附件。\n\n")
+    email.addContent("顺颂商祺")
+    email.addAttachment(path)
+    email.sendMail()
+
 def sendLimitUpEmail():
     import logging
     import datetime
 
     from utilities.set_env import set_env
     from utilities.azure_cosmos import init_container
-    from utilities.email_client import EmailClient
     import azure.cosmos.exceptions as exceptions
-
-    # for limit_up_trigger_validate
-    import uuid
-    utc_timestamp = datetime.datetime.utcnow().replace(
-        tzinfo=datetime.timezone.utc).isoformat()
-    # ------------------
 
     set_env()
     container = init_container()
@@ -164,63 +184,35 @@ def sendLimitUpEmail():
         # 如果能正常读取limit_up_identifier，那是已经发送过通知了
         record = container.read_item(item=cal_date, partition_key="limit_up_identifier")
         # for limit_up_trigger_validate
-        container.create_item(body={
-            "id": str(uuid.uuid4()),
-            "partitionKey": "limit_up_trigger_validate",
-            'type': 'skip',
-            "log": 'limit up has created, skip.',
-            "created_at": utc_timestamp
-        })
+        createLog(container, 'skip', 'limit up has created, skip.')
         logging.info('limit up has created, skip.')
     except exceptions.CosmosResourceNotFoundError:
         try:
             df = instance.generate_limit_up_df()
-            ths_daily_exist_df = instance.pro.ths_daily(**{ "trade_date": cal_date }, fields=[ "ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "avg_price", "change", "pct_change", "vol", "turnover_rate" ])
-            if instance.limit_up_df.empty or instance.daily_basic_df.empty or len(ths_daily_exist_df) < 1180:
+            exchangeA_codes = list(instance.ths_index['ts_code']) # A股概念 ths_index包含了A股/美股/HK市场的概念，当前只取A股概念
+            exchangeA_ths_daily = instance.ths_daily[instance.ths_daily['ts_code'].isin(exchangeA_codes)] # ths_daily是概念的行情数据，只取A股概念的行情数据
+            # Tushare的ths_daily数据是在收盘后逐渐计算出来的
+            # 2024-03-29耶稣受难日，没有其他市场的行情数据，ths_daily获取到的行数不足1000条，导致未触发邮件发送
+            # 这里排除掉其他市场的数据，2024-03-29一共是410条，但是其实和2024-03-29的445条还是有差距
+            print(f'length of exchangeA_ths_daily is {len(exchangeA_ths_daily)}')
+            if instance.limit_up_df.empty or instance.daily_basic_df.empty or len(exchangeA_ths_daily) < 400:
                 logging.info('tushare has not update')
                 # for limit_up_trigger_validate
-                container.create_item(body={
-                    "id": str(uuid.uuid4()),
-                    "partitionKey": "limit_up_trigger_validate",
-                    'type': 'skip',
-                    "log": 'tushare has not update',
-                    "created_at": utc_timestamp
-                })
+                createLog(container, 'skip', 'tushare has not update')
             else:
                 ths_concepts = instance.readThsConcept(cal_date)
                 path = generate_limit_up_excel(df, cal_date, ths_concepts=ths_concepts)
                 logging.info('limit up file created at %s' % path)
                 # for limit_up_trigger_validate
-                container.create_item(body={
-                    "id": str(uuid.uuid4()),
-                    "partitionKey": "limit_up_trigger_validate",
-                    'type': 'success',
-                    "log": 'limit up file created at %s' % path,
-                    "created_at": utc_timestamp
-                })
-                
-                utc_timestamp = datetime.datetime.utcnow().replace(
-                    tzinfo=datetime.timezone.utc).isoformat()
+                createLog(container, 'success', f'limit up file created at {path}')
 
-                email = EmailClient(
-                    os.getenv("SENDER_EMAIL"),
-                    os.getenv("SENDER_EMAIL_PASS"),
-                    os.getenv("RECEIVERS_EMAIL")
-                )
-                email.setSubject("%s涨停列表" % cal_date)
-                email.addContent("请查阅附件。\n\n")
-                email.addContent("顺颂商祺")
-                email.addAttachment(path)
-                email.sendMail()
+                utc_timestamp = datetime.datetime.utcnow().isoformat()
+
+                sendEmail(cal_date, path)
                 os.remove(path)
                 logging.info('email has sent')
 
-                has_send_notify = {
-                    "id": instance.cal_date,
-                    "partitionKey": "limit_up_identifier",
-                    "is_send_notify": True,
-                    "created_at": utc_timestamp
-                }
+                has_send_notify = { "id": instance.cal_date, "partitionKey": "limit_up_identifier", "is_send_notify": True, "created_at": utc_timestamp }
                 container.create_item(body=has_send_notify)
         except Exception as e:
             logging.error("An error occurred", exc_info=True)
@@ -256,23 +248,26 @@ class TushareLimitUp:
         return row['pretrade_date'] if row['is_open'] == 0 else row['cal_date']
 
     def readTushareData(self, cal_date) -> None:
-        # 拉取数据
+        # 涨停数据
         self.limit_up_df = self.pro.limit_list_d(**{ "trade_date": cal_date, "limit_type": "U", }, fields=[ "trade_date", "ts_code", "limit_amount", "fd_amount", "first_time", "last_time", "open_times", "up_stat", "limit_times", "limit" ])
+        # 股票当日涨幅数据
         self.daily_df = self.pro.daily(**{"trade_date": cal_date}, fields=[ "ts_code", "trade_date", "open", "high", "low", "close", "pre_close", "change", "pct_chg", "vol", "amount" ])
 
+        # 股票基础信息
         self.stock_basic_df = self.pro.stock_basic(**{"list_status": 'L'}, fields=['ts_code','name','industry'])
         self.daily_basic_df = self.pro.daily_basic(**{"trade_date": cal_date}, fields=['ts_code','trade_date','circ_mv','total_mv','turnover_rate','turnover_rate_f','pe','pb'])
 
-        self.isReadTushare = True
-
-    def readThsConcept(self, cal_date) -> pd.DataFrame:
-        # 以下是同花顺概念
         ## 取同花顺所有概念 exchange -> A-a股，type -> N-概念指数
         ### 目的时获取概念名称
         self.ths_index = self.pro.ths_index(**{ "exchange": "A", "type": "N" }, fields=[ "ts_code", "name", "count", "exchange", "list_date", "type" ])
         self.ths_index = self.ths_index.rename(columns={'name': 'concept'})
         ## 取同花顺概念当日涨幅
         self.ths_daily = self.pro.ths_daily(**{ "trade_date": cal_date }, fields=[ "ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "avg_price", "change", "pct_change", "vol", "turnover_rate" ])
+        
+        self.isReadTushare = True
+
+    def readThsConcept(self, cal_date) -> pd.DataFrame:
+        # 以下是同花顺概念
         self.ths_index = pd.merge(self.ths_index, self.ths_daily, on='ts_code', how='inner')
 
         limit_up_df = self.getLimitUpData(cal_date)
