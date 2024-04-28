@@ -20,4 +20,4 @@ def LimitUpNotification(myTimer: func.TimerRequest) -> None:
 def updateNotionObserve(myTimer: func.TimerRequest) -> None:
     from scripts.observe_security import update_tracking_security
     database_id = os.environ['NOTION_DATABASE_ID']
-    sendLimitUpEmail(database_id)
+    update_tracking_security(database_id)
