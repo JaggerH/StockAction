@@ -183,8 +183,6 @@ def sendLimitUpEmail():
     try:
         # 如果能正常读取limit_up_identifier，那是已经发送过通知了
         record = container.read_item(item=cal_date, partition_key="limit_up_identifier")
-        # for limit_up_trigger_validate
-        createLog(container, 'skip', 'limit up has created, skip.')
         logging.info('limit up has created, skip.')
     except exceptions.CosmosResourceNotFoundError:
         try:
@@ -197,8 +195,6 @@ def sendLimitUpEmail():
             print(f'length of exchangeA_ths_daily is {len(exchangeA_ths_daily)}')
             if instance.limit_up_df.empty or instance.daily_basic_df.empty or len(exchangeA_ths_daily) < 400:
                 logging.info('tushare has not update')
-                # for limit_up_trigger_validate
-                createLog(container, 'skip', 'tushare has not update')
             else:
                 ths_concepts = instance.readThsConcept(cal_date)
                 path = generate_limit_up_excel(df, cal_date, ths_concepts=ths_concepts)
