@@ -22,7 +22,7 @@ def prepare_data(df):
     start_date = df['推送时间'].min().replace("-", "")
     columns = df.columns
     index = df.index
-    latest_trade_date = getLatestTradeData(specific_date=20240426)
+    latest_trade_date = getLatestTradeData()
     info = getSecurityInfo()
 
     filter_info = info[info['symbol'].isin(df['股票代码'])]
