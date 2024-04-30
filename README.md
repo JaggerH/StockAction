@@ -13,6 +13,8 @@ set virtual environment
 ```
 python3 -m venv .venv
 ./.venv/bin/active
+# windows
+.\.venv\Scripts\Activate.ps1 
 pip install -r requirements.txt
 ```
 set environment variables
