@@ -11,15 +11,18 @@ docker-compose up
 ### Option 2. Use venv
 set virtual environment
 ```
-python3 -m venv .venv
+python -m venv .venv
+# linux
 ./.venv/bin/active
+
 # windows
 .\.venv\Scripts\Activate.ps1 
+
 pip install -r requirements.txt
 ```
 set environment variables
 ```
-# macOS
+# linux
 export LOGIN_API_KEY=YOUR_API_KEY
 export TUSHARE_API_KEY=YOUR_API_KEY
 
@@ -32,7 +35,17 @@ To run the server, navigate to the chatgpt_api directory and run:
 uvicorn app.main:app --reload --host=0.0.0.0 --port=8000
 ```
 This command starts the Uvicorn server with live reloading.
-
+# Develop
+Currently, Do not use pip freeze.
+I am developing under windows, pip freeze will insert some package like `pywin32`, which cause Github Actions failed.
+## JUST ADD PACKAGE MANUALLY
+```bash
+# -------- WARNING --------
+# Do not use pip freeze
+# -------- WARNING --------
+# windows
+pip freeze | Out-File -Encoding UTF8 requirements.txt
+```
 # Build Tushare Models
 通过BeautifulSoup自动生成tushare_models.py
 ## 使用方式
