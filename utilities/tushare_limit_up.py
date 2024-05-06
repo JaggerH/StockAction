@@ -186,18 +186,20 @@ def sendLimitUpEmail():
         logging.info('limit up has created, skip.')
     except exceptions.CosmosResourceNotFoundError:
         try:
-            df = instance.generate_limit_up_df()
-            exchangeA_codes = list(instance.ths_index['ts_code']) # A股概念 ths_index包含了A股/美股/HK市场的概念，当前只取A股概念
-            exchangeA_ths_daily = instance.ths_daily[instance.ths_daily['ts_code'].isin(exchangeA_codes)] # ths_daily是概念的行情数据，只取A股概念的行情数据
+            df = instance.generate_limit_up_df(cal_date)
+            # exchangeA_codes = list(instance.ths_index['ts_code']) # A股概念 ths_index包含了A股/美股/HK市场的概念，当前只取A股概念
+            # exchangeA_ths_daily = instance.ths_daily[instance.ths_daily['ts_code'].isin(exchangeA_codes)] # ths_daily是概念的行情数据，只取A股概念的行情数据
             # Tushare的ths_daily数据是在收盘后逐渐计算出来的
             # 2024-03-29耶稣受难日，没有其他市场的行情数据，ths_daily获取到的行数不足1000条，导致未触发邮件发送
             # 这里排除掉其他市场的数据，2024-03-29一共是410条，但是其实和2024-03-29的445条还是有差距
-            print(f'length of exchangeA_ths_daily is {len(exchangeA_ths_daily)}')
-            if instance.limit_up_df.empty or instance.daily_basic_df.empty or len(exchangeA_ths_daily) < 400:
+            # logging.info(f'length of exchangeA_ths_daily is {len(exchangeA_ths_daily)}')
+            # if instance.limit_up_df.empty or instance.daily_basic_df.empty or len(exchangeA_ths_daily) < 400:
+            if instance.limit_up_df.empty or instance.daily_basic_df.empty:# or len(exchangeA_ths_daily) < 400:
                 logging.info('tushare has not update')
             else:
-                ths_concepts = instance.readThsConcept(cal_date)
-                path = generate_limit_up_excel(df, cal_date, ths_concepts=ths_concepts)
+                # ths_concepts = instance.readThsConcept(cal_date)
+                # path = generate_limit_up_excel(df, cal_date, ths_concepts=ths_concepts)
+                path = generate_limit_up_excel(df, cal_date)
                 logging.info('limit up file created at %s' % path)
                 # for limit_up_trigger_validate
                 createLog(container, 'success', f'limit up file created at {path}')
@@ -255,24 +257,24 @@ class TushareLimitUp:
 
         ## 取同花顺所有概念 exchange -> A-a股，type -> N-概念指数
         ### 目的时获取概念名称
-        self.ths_index = self.pro.ths_index(**{ "exchange": "A", "type": "N" }, fields=[ "ts_code", "name", "count", "exchange", "list_date", "type" ])
-        self.ths_index = self.ths_index.rename(columns={'name': 'concept'})
+        # self.ths_index = self.pro.ths_index(**{ "exchange": "A", "type": "N" }, fields=[ "ts_code", "name", "count", "exchange", "list_date", "type" ])
+        # self.ths_index = self.ths_index.rename(columns={'name': 'concept'})
         ## 取同花顺概念当日涨幅
-        self.ths_daily = self.pro.ths_daily(**{ "trade_date": cal_date }, fields=[ "ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "avg_price", "change", "pct_change", "vol", "turnover_rate" ])
+        # self.ths_daily = self.pro.ths_daily(**{ "trade_date": cal_date }, fields=[ "ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "avg_price", "change", "pct_change", "vol", "turnover_rate" ])
         
         self.isReadTushare = True
 
     def readThsConcept(self, cal_date) -> pd.DataFrame:
         # 以下是同花顺概念
-        self.ths_index = pd.merge(self.ths_index, self.ths_daily, on='ts_code', how='inner')
+        # self.ths_index = pd.merge(self.ths_index, self.ths_daily, on='ts_code', how='inner')
 
         limit_up_df = self.getLimitUpData(cal_date)
         self.ths_members = [ self.pro.ths_member(**{ "code": code }, fields=[ "ts_code", "code", "name" ]) for code in list(limit_up_df['ts_code']) ]
         self.ths_members = pd.concat(self.ths_members, ignore_index=True)
 
-        self.ths_concept = pd.merge(self.ths_members, self.ths_index, on='ts_code', how='inner')
+        # self.ths_concept = pd.merge(self.ths_members, self.ths_index, on='ts_code', how='inner')
         self.isReadThsConcept = True
-        return self.ths_concept
+        # return self.ths_concept
 
     # 涨停数据
     def getLimitUpData(self, cal_date) -> pd.DataFrame:
